@@ -4,66 +4,62 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-function normalizePhone(input: string): string {
-  const digits = input.replace(/\D/g, '')
-  if (digits.startsWith('8') && digits.length === 11) return '+7' + digits.slice(1)
-  if (digits.startsWith('7') && digits.length === 11) return '+' + digits
-  if (digits.length === 10) return '+7' + digits
-  return '+' + digits
-}
-
 export default function LoginPage() {
   const router = useRouter()
   const supabase = createClient()
-  const [step, setStep] = useState<'phone' | 'code'>('phone')
   const [phone, setPhone] = useState('')
-  const [code, setCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  async function sendCode() {
+  async function enter() {
     setError(null)
-    const normalized = normalizePhone(phone)
-    if (normalized.length < 11) {
+    if (phone.replace(/\D/g, '').length < 10) {
       setError('Введите корректный номер телефона')
       return
     }
     setLoading(true)
-    const { error: err } = await supabase.auth.signInWithOtp({ phone: normalized })
-    setLoading(false)
-    if (err) {
-      setError('Не получилось отправить код. Проверьте номер.')
-      return
-    }
-    setPhone(normalized)
-    setStep('code')
-  }
 
-  async function verifyCode() {
-    setError(null)
-    setLoading(true)
-    const { data, error: err } = await supabase.auth.verifyOtp({
-      phone,
-      token: code,
-      type: 'sms',
-    })
-    setLoading(false)
-    if (err || !data.session) {
-      setError('Неверный код. Попробуйте ещё раз.')
-      return
-    }
+    try {
+      const res = await fetch('/api/auth/phone-login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phone }),
+      })
+      const data = await res.json()
 
-    // проверяем, заполнен ли уже адрес (профиль создаётся триггером автоматически)
-    const { data: profile } = await supabase
-      .from('profiles')
-      .select('street, building, city')
-      .eq('id', data.user!.id)
-      .single()
+      if (!res.ok) {
+        setError(data.error ?? 'Не получилось войти. Попробуйте ещё раз.')
+        setLoading(false)
+        return
+      }
 
-    if (!profile || !profile.street || !profile.building) {
-      router.push('/onboarding')
-    } else {
-      router.push('/')
+      const { error: signInErr, data: signInData } = await supabase.auth.signInWithPassword({
+        email: data.email,
+        password: data.password,
+      })
+
+      setLoading(false)
+
+      if (signInErr || !signInData.session) {
+        setError(`DEBUG signIn: ${signInErr?.message ?? 'no session'}`)
+        return
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('street, building, city')
+        .eq('id', signInData.user.id)
+        .single()
+
+      if (!profile || !profile.street || !profile.building) {
+        router.push('/onboarding')
+      } else {
+        router.push('/')
+      }
+      router.refresh()
+    } catch (e: any) {
+      setLoading(false)
+      setError(`DEBUG client catch: ${e?.message ?? String(e)}`)
     }
   }
 
@@ -74,52 +70,27 @@ export default function LoginPage() {
         <p className="text-muted mt-2">Чем больше вас — тем ниже цена</p>
       </div>
 
-      {step === 'phone' ? (
-        <>
-          <label className="text-sm text-muted mb-2 block">Номер телефона</label>
-          <input
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            placeholder="+7 700 000 00 00"
-            inputMode="tel"
-            className="w-full rounded-xl2 bg-surface border border-white/10 px-4 py-3.5 text-lg outline-none focus:border-white/30 mb-4"
-          />
-          {error && <p className="text-accent text-sm mb-4">{error}</p>}
-          <button
-            onClick={sendCode}
-            disabled={loading}
-            className="w-full rounded-xl2 bg-accent py-4 text-lg font-extrabold disabled:opacity-60"
-          >
-            {loading ? 'Отправка…' : 'ПОЛУЧИТЬ КОД'}
-          </button>
-          <p className="text-xs text-muted mt-4 text-center">
-            Номер телефона используется только для входа. Он никогда не виден другим пользователям.
-          </p>
-        </>
-      ) : (
-        <>
-          <label className="text-sm text-muted mb-2 block">Код из SMS</label>
-          <input
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-            placeholder="123456"
-            inputMode="numeric"
-            maxLength={6}
-            className="w-full rounded-xl2 bg-surface border border-white/10 px-4 py-3.5 text-lg outline-none focus:border-white/30 mb-4 tracking-widest text-center"
-          />
-          {error && <p className="text-accent text-sm mb-4">{error}</p>}
-          <button
-            onClick={verifyCode}
-            disabled={loading}
-            className="w-full rounded-xl2 bg-accent py-4 text-lg font-extrabold disabled:opacity-60"
-          >
-            {loading ? 'Проверка…' : 'ВОЙТИ'}
-          </button>
-          <button onClick={() => setStep('phone')} className="w-full py-3 text-sm text-muted mt-2">
-            Изменить номер
-          </button>
-        </>
-      )}
+      <label className="text-sm text-muted mb-2 block">Номер телефона</label>
+      <input
+        value={phone}
+        onChange={(e) => setPhone(e.target.value)}
+        onKeyDown={(e) => e.key === 'Enter' && enter()}
+        placeholder="+7 700 000 00 00"
+        inputMode="tel"
+        className="w-full rounded-xl2 bg-surface border border-white/10 px-4 py-3.5 text-lg outline-none focus:border-white/30 mb-4"
+      />
+      {error && <p className="text-accent text-sm mb-4">{error}</p>}
+      <button
+        onClick={enter}
+        disabled={loading}
+        className="w-full rounded-xl2 bg-accent py-4 text-lg font-extrabold disabled:opacity-60"
+      >
+        {loading ? 'Входим…' : 'ВОЙТИ'}
+      </button>
+      <p className="text-xs text-muted mt-4 text-center">
+        Номер телефона используется только как логин и никогда не виден другим пользователям.
+        Если вы заходите впервые — аккаунт создастся автоматически.
+      </p>
     </div>
   )
 }
