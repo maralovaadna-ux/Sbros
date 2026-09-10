@@ -2,8 +2,9 @@
 
 import { useEffect, useState, useTransition } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { currentPrice, nextTierGap, progressPercent, scopeLabel, unitCountLabel, unitLabel, formatTenge, isOfferFinished, manualSoldLabel } from '@/lib/pricing'
+import { nextTierGap, progressPercent, scopeLabel, unitCountLabel, unitLabel, formatTenge, isOfferFinished, manualSoldLabel } from '@/lib/pricing'
 import ProgressBar from './ProgressBar'
+import TieredProgressBar from './TieredProgressBar'
 import Countdown from './Countdown'
 import RegisterPromptModal from './RegisterPromptModal'
 import type { OfferWithStats } from '@/lib/types'
@@ -92,7 +93,6 @@ export default function ParticipateButton({
     if (data.user) participateAs(data.user.id)
   }
 
-  const price = currentPrice(offer, offer.price_tiers, count)
   const gap = nextTierGap(offer.price_tiers, count)
   const pct = progressPercent(count, offer.target_participants)
 
@@ -161,7 +161,16 @@ export default function ParticipateButton({
         </div>
         <span className="text-sm text-muted">{pct}%</span>
       </div>
-      <ProgressBar percent={pct} />
+      {offer.price_tiers.length > 0 ? (
+        <TieredProgressBar
+          percent={pct}
+          tiers={offer.price_tiers}
+          targetParticipants={offer.target_participants}
+          currentCount={count}
+        />
+      ) : (
+        <ProgressBar percent={pct} />
+      )}
       <div className="flex items-center justify-between mt-2">
         {gap ? (
           <p className="text-sm text-muted">

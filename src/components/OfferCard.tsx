@@ -2,12 +2,11 @@ import Link from 'next/link'
 import ProgressBar from './ProgressBar'
 import ScopeBadge from './ScopeBadge'
 import Countdown from './Countdown'
-import { currentPrice, formatTenge, nextTierGap, progressPercent, unitCountLabel, unitLabel, isOfferFinished, manualSoldLabel } from '@/lib/pricing'
+import { formatTenge, nextTierGap, progressPercent, unitCountLabel, unitLabel, isOfferFinished, manualSoldLabel } from '@/lib/pricing'
 import type { OfferWithStats } from '@/lib/types'
 
 export default function OfferCard({ offer }: { offer: OfferWithStats }) {
   const count = offer.stats.participants_count
-  const price = currentPrice(offer, offer.price_tiers, count)
   const gap = nextTierGap(offer.price_tiers, count)
   const pct = progressPercent(count, offer.target_participants)
   const finished = isOfferFinished(offer)
@@ -47,7 +46,7 @@ export default function OfferCard({ offer }: { offer: OfferWithStats }) {
 
       <div className="flex items-baseline gap-2 mb-2">
         <span className="text-sm text-muted line-through">{formatTenge(offer.base_price)}</span>
-        <span className="text-2xl font-extrabold text-accent2">{formatTenge(price)}</span>
+        <span className="text-2xl font-extrabold text-accent2">{formatTenge(offer.target_price)}</span>
       </div>
 
       <ProgressBar percent={pct} />
