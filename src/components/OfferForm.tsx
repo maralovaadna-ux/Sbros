@@ -21,7 +21,7 @@ export default function OfferForm({
 
   const [title, setTitle] = useState(existing?.title ?? '')
   const [description, setDescription] = useState(existing?.description ?? '')
-  const [imageUrl, setImageUrl] = useState(existing?.image_url ?? '')
+  const [imageUrls, setImageUrls] = useState<string[]>(existing?.image_urls ?? (existing?.image_url ? [existing.image_url] : []))
   const [basePrice, setBasePrice] = useState(String(existing?.base_price ?? ''))
   const [targetPrice, setTargetPrice] = useState(String(existing?.target_price ?? ''))
   const [targetParticipants, setTargetParticipants] = useState(String(existing?.target_participants ?? ''))
@@ -91,7 +91,8 @@ export default function OfferForm({
     const payload = {
       title: title.trim(),
       description: description.trim() || null,
-      image_url: imageUrl.trim() || null,
+      image_url: imageUrls[0] ?? null,
+      image_urls: imageUrls,
       base_price: Number(basePrice),
       target_price: Number(targetPrice),
       target_participants: Number(targetParticipants),
@@ -159,7 +160,7 @@ export default function OfferForm({
     <div className="flex flex-col gap-5">
       <Field label="Название *" value={title} onChange={setTitle} placeholder="Мясной набор" />
       <TextArea label="Описание" value={description} onChange={setDescription} placeholder="5 кг мяса, фарш, курица" />
-      <ImageUploader value={imageUrl} onChange={setImageUrl} />
+      <ImageUploader value={imageUrls} onChange={setImageUrls} />
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Обычная цена *" value={basePrice} onChange={setBasePrice} placeholder="35000" type="number" />

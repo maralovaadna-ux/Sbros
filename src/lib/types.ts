@@ -27,6 +27,7 @@ export type Offer = {
   title: string
   description: string | null
   image_url: string | null
+  image_urls: string[]
   base_price: number
   target_price: number
   target_participants: number

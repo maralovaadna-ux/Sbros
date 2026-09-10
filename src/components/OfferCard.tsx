@@ -24,12 +24,12 @@ export default function OfferCard({ offer }: { offer: OfferWithStats }) {
         </div>
       </div>
 
-      {offer.image_url && (
+      {offer.image_urls?.[0] && (
         // eslint-disable-next-line @next/next/no-img-element
         <img
-          src={offer.image_url}
+          src={offer.image_urls[0]}
           alt={offer.title}
-          className="w-full h-36 object-cover rounded-lg mb-3"
+          className="w-full h-36 object-contain bg-black rounded-lg mb-3"
         />
       )}
 

@@ -6,6 +6,7 @@ import ParticipateButton from '@/components/ParticipateButton'
 import InviteButton from '@/components/InviteButton'
 import Chat from '@/components/Chat'
 import Countdown from '@/components/Countdown'
+import PhotoGallery from '@/components/PhotoGallery'
 import { formatDateTime } from '@/lib/pricing'
 import type { Message, Offer, PriceTier } from '@/lib/types'
 
@@ -69,9 +70,8 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
         <span className="text-sm text-muted">Назад</span>
       </header>
 
-      {offer.image_url && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img src={offer.image_url} alt={offer.title} className="w-full h-48 object-cover" />
+      {offer.image_urls?.length > 0 && (
+        <PhotoGallery urls={offer.image_urls} heightClass="h-64" />
       )}
 
       <div className="px-4 pt-4">
