@@ -76,6 +76,17 @@ export function timeLeft(endsAt: string): { text: string; expired: boolean } {
   return { text: parts.join(' '), expired: false }
 }
 
+export function manualSoldLabel(offer: Pick<Offer, 'manual_sold_count' | 'manual_sold_price' | 'target_participants'>): string | null {
+  if (offer.manual_sold_count == null) return null
+  const priceLine = offer.manual_sold_price != null ? ` по ${formatTenge(offer.manual_sold_price)}` : ''
+  return `Продано ${offer.manual_sold_count}/${offer.target_participants}${priceLine}`
+}
+
+export function isOfferFinished(offer: Pick<Offer, 'ends_at' | 'status'>): boolean {
+  if (offer.status === 'finished') return true
+  return new Date(offer.ends_at).getTime() <= Date.now()
+}
+
 export function formatDateTime(iso: string): string {
   const d = new Date(iso)
   return d.toLocaleString('ru-RU', {

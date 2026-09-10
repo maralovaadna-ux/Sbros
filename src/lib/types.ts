@@ -1,5 +1,6 @@
 export type ScopeType = 'building' | 'residential_complex' | 'district' | 'city' | 'country' | 'custom'
 export type UnitType = 'participants' | 'kg' | 'pcs'
+export type OfferStatus = 'active' | 'finished'
 
 export type Profile = {
   id: string
@@ -44,6 +45,10 @@ export type Offer = {
   unit: UnitType
   custom_scope_label: string | null
   offer_number: number
+  status: OfferStatus
+  manual_sold_count: number | null
+  manual_sold_price: number | null
+  seller_whatsapp: string | null
 }
 
 export type OfferStats = {

@@ -7,6 +7,7 @@ import InviteButton from '@/components/InviteButton'
 import Chat from '@/components/Chat'
 import Countdown from '@/components/Countdown'
 import PhotoGallery from '@/components/PhotoGallery'
+import WhatsAppButton from '@/components/WhatsAppButton'
 import { formatDateTime } from '@/lib/pricing'
 import type { Message, Offer, PriceTier } from '@/lib/types'
 
@@ -18,6 +19,7 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
     data: { user },
   } = await supabase.auth.getUser()
 
+  // RLS теперь открыт для всех (в т.ч. гостей) — если предложения нет вообще, будет notFound.
   const { data: offer } = await supabase
     .from('offers')
     .select('*')
@@ -81,7 +83,12 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
           <Countdown endsAt={offer.ends_at} />
         </div>
         <p className="text-xs text-muted mb-1">СБРОС #{offer.offer_number}</p>
-        <h1 className="text-2xl font-extrabold mb-1">{offer.title}</h1>
+        <div className="flex items-center gap-2 mb-1">
+          <h1 className="text-2xl font-extrabold">{offer.title}</h1>
+          {offer.status === 'finished' && (
+            <span className="text-xs font-bold text-muted bg-white/10 rounded-full px-2 py-0.5 shrink-0">ЗАКОНЧЕН</span>
+          )}
+        </div>
         {offer.description && <p className="text-muted mb-2">{offer.description}</p>}
         <p className="text-xs text-muted mb-4">Завершится: {formatDateTime(offer.ends_at)}</p>
 
@@ -102,6 +109,16 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
           hasAccess={hasAccess}
           isGuest={!user}
         />
+
+        {offer.seller_whatsapp && (
+          <div className="flex items-center gap-3 mt-4 rounded-xl2 bg-surface border border-white/8 p-3">
+            <WhatsAppButton phone={offer.seller_whatsapp} offerTitle={offer.title} />
+            <div>
+              <p className="font-semibold text-sm">Есть вопросы?</p>
+              <p className="text-xs text-muted">Напишите продавцу напрямую в WhatsApp</p>
+            </div>
+          </div>
+        )}
 
         <div className="mt-4">
           <InviteButton offer={offerWithStats} />

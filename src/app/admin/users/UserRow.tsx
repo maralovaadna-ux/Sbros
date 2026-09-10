@@ -28,11 +28,11 @@ export default function UserRow({ user }: { user: Profile }) {
       <button
         onClick={toggle}
         disabled={pending}
-        className={`text-xs font-bold rounded-full px-3 py-1.5 shrink-0 ${
+        className={`text-xs font-bold rounded-full px-3 py-1.5 shrink-0 disabled:opacity-60 ${
           isBlocked ? 'bg-white/10 text-muted' : 'bg-accent/15 text-accent'
         }`}
       >
-        {isBlocked ? 'Разблокировать' : 'Заблокировать'}
+        {pending ? '…' : isBlocked ? 'Разблокировать' : 'Заблокировать'}
       </button>
     </div>
   )

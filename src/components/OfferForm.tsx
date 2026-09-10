@@ -40,6 +40,15 @@ export default function OfferForm({
   const [building, setBuilding] = useState(existing?.building ?? '')
   const [customLabel, setCustomLabel] = useState(existing?.custom_scope_label ?? '')
 
+  const [status, setStatus] = useState<'active' | 'finished'>(existing?.status ?? 'active')
+  const [manualSoldCount, setManualSoldCount] = useState(
+    existing?.manual_sold_count != null ? String(existing.manual_sold_count) : ''
+  )
+  const [manualSoldPrice, setManualSoldPrice] = useState(
+    existing?.manual_sold_price != null ? String(existing.manual_sold_price) : ''
+  )
+  const [sellerWhatsapp, setSellerWhatsapp] = useState(existing?.seller_whatsapp ?? '')
+
   const [tiers, setTiers] = useState<TierDraft[]>(
     existingTiers && existingTiers.length > 0
       ? existingTiers.map((t) => ({ min_participants: String(t.min_participants), price: String(t.price) }))
@@ -99,6 +108,10 @@ export default function OfferForm({
       unit,
       ends_at: new Date(`${endsDate}T${endsTime}:00`).toISOString(),
       is_active: isActive,
+      status,
+      manual_sold_count: manualSoldCount.trim() ? Number(manualSoldCount) : null,
+      manual_sold_price: manualSoldPrice.trim() ? Number(manualSoldPrice) : null,
+      seller_whatsapp: sellerWhatsapp.trim() || null,
       scope_type: scopeType,
       city: scopeType === 'country' || scopeType === 'custom' ? null : city.trim(),
       district: scopeType === 'district' ? district.trim() : null,
@@ -161,6 +174,16 @@ export default function OfferForm({
       <Field label="Название *" value={title} onChange={setTitle} placeholder="Мясной набор" />
       <TextArea label="Описание" value={description} onChange={setDescription} placeholder="5 кг мяса, фарш, курица" />
       <ImageUploader value={imageUrls} onChange={setImageUrls} />
+
+      <Field
+        label="WhatsApp продавца (необязательно)"
+        value={sellerWhatsapp}
+        onChange={setSellerWhatsapp}
+        placeholder="+7 700 000 00 00"
+      />
+      <p className="text-xs text-muted -mt-3">
+        На карточке появится кнопка для прямой связи с продавцом через WhatsApp
+      </p>
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Обычная цена *" value={basePrice} onChange={setBasePrice} placeholder="35000" type="number" />
@@ -283,6 +306,52 @@ export default function OfferForm({
         </div>
       </div>
 
+      <div>
+        <label className="text-sm text-muted mb-2 block">Статус (для витрины)</label>
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            onClick={() => setStatus('active')}
+            className={`rounded-xl2 px-3 py-3 text-sm font-semibold border ${
+              status === 'active' ? 'bg-white text-ink border-white' : 'bg-surface border-white/10 text-muted'
+            }`}
+          >
+            Активно
+          </button>
+          <button
+            onClick={() => setStatus('finished')}
+            className={`rounded-xl2 px-3 py-3 text-sm font-semibold border ${
+              status === 'finished' ? 'bg-white text-ink border-white' : 'bg-surface border-white/10 text-muted'
+            }`}
+          >
+            Закончен
+          </button>
+        </div>
+        <p className="text-xs text-muted mt-1.5">
+          «Закончен» — предложение показывается в ленте со штампом ЗАКОНЧЕН, участие недоступно.
+          Полезно для уже прошедших СБРОСов (соц. доказательство).
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3">
+        <Field
+          label="Штамп «Продано» (необязательно)"
+          value={manualSoldCount}
+          onChange={setManualSoldCount}
+          placeholder="напр. 15"
+          type="number"
+        />
+        <Field
+          label="Цена для штампа"
+          value={manualSoldPrice}
+          onChange={setManualSoldPrice}
+          placeholder="напр. 4500"
+          type="number"
+        />
+      </div>
+      <p className="text-xs text-muted -mt-3">
+        Показывается как «Продано N/{targetParticipants || 'Y'}{manualSoldPrice ? ` по ${manualSoldPrice} ₸` : ''}». Не влияет на реальных участников и реальную цену.
+      </p>
+
       <label className="flex items-center gap-2 text-sm">
         <input type="checkbox" checked={isActive} onChange={(e) => setIsActive(e.target.checked)} />
         Предложение активно (видно пользователям)
@@ -293,8 +362,9 @@ export default function OfferForm({
       <button
         onClick={save}
         disabled={saving}
-        className="w-full rounded-xl2 bg-accent py-4 font-extrabold disabled:opacity-60"
+        className="w-full rounded-xl2 bg-accent py-4 font-extrabold disabled:opacity-70 flex items-center justify-center gap-2"
       >
+        {saving && <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />}
         {saving ? 'Сохранение…' : existing ? 'СОХРАНИТЬ' : 'СОЗДАТЬ ПРЕДЛОЖЕНИЕ'}
       </button>
 

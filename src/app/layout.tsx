@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import './globals.css'
+import SplashScreen from '@/components/SplashScreen'
 
 export const metadata: Metadata = {
   title: 'СБРОС',
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="ru">
       <body className="min-h-screen bg-ink text-white">
+        <SplashScreen />
         <div className="mx-auto max-w-[480px] min-h-screen bg-ink relative">{children}</div>
       </body>
     </html>

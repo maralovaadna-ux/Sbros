@@ -75,7 +75,6 @@ export default function Chat({
       <RegisterPromptModal
         open={showPrompt}
         onClose={() => setShowPrompt(false)}
-        text="Чтобы писать в чат, зарегистрируйтесь — это займёт меньше минуты."
       />
 
       <div
