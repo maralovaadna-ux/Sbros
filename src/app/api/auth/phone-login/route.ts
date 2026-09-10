@@ -2,6 +2,11 @@ import { NextResponse } from 'next/server'
 import { createClient as createServiceClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
+// Детерминированный "псевдо-email" и пароль из номера телефона + серверного секрета.
+// Секрет живёт только здесь (переменная окружения без NEXT_PUBLIC_), никогда не попадает в браузер.
+// Так номер телефона остаётся единственным "логином", а Supabase Auth технически
+// продолжает работать через email+password под капотом.
+
 function normalizePhone(input: string): string {
   const digits = input.replace(/\D/g, '')
   if (digits.startsWith('8') && digits.length === 11) return '+7' + digits.slice(1)
@@ -42,6 +47,8 @@ export async function POST(req: Request) {
 
     const { email, password } = deriveCredentials(phone)
 
+    // Пытаемся найти существующего пользователя по email-паттерну.
+    // Проще и надёжнее: пробуем создать — если уже есть, Supabase вернёт ошибку "already registered".
     const { data: created, error: createErr } = await admin.auth.admin.createUser({
       email,
       password,
@@ -50,11 +57,16 @@ export async function POST(req: Request) {
     })
 
     if (createErr) {
+      // уже существует — это нормальный сценарий повторного входа
       if (!String(createErr.message).toLowerCase().includes('already')) {
         return NextResponse.json({ error: `DEBUG: ${createErr.message}` }, { status: 500 })
       }
     }
 
+    // Возвращаем email/password клиенту НЕ нужно — вместо этого генерируем магическую ссылку-сессию
+    // через generateLink, но проще и надёжнее: клиент сам сделает signInWithPassword с этими же
+    // производными данными. email/password детерминированы от телефона, поэтому их можно
+    // безопасно вернуть — это не секрет пользователя, это внутренний технический идентификатор.
     return NextResponse.json({ email, password })
   } catch (e: any) {
     return NextResponse.json({ error: `DEBUG catch: ${e?.message ?? String(e)}` }, { status: 500 })

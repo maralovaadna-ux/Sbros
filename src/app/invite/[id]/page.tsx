@@ -1,16 +1,7 @@
 import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
 
 export default async function InvitePage({ params }: { params: { id: string } }) {
-  const supabase = createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-
-  if (!user) {
-    // после входа/регистрации отправим прямо на предложение
-    redirect(`/login?redirect=/offer/${params.id}`)
-  }
-
+  // Гость тоже может открыть предложение по ссылке — просто перенаправляем
+  // на карточку. Регистрация всплывет сама, если он попробует участвовать/писать в чат.
   redirect(`/offer/${params.id}`)
 }

@@ -3,8 +3,9 @@
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import type { Offer, PriceTier, ScopeType } from '@/lib/types'
-import { SCOPE_ICONS, SCOPE_LABELS } from '@/lib/types'
+import type { Offer, PriceTier, ScopeType, UnitType } from '@/lib/types'
+import { SCOPE_ICONS, SCOPE_LABELS, UNIT_LABELS } from '@/lib/types'
+import ImageUploader from './ImageUploader'
 
 type TierDraft = { min_participants: string; price: string }
 
@@ -24,7 +25,11 @@ export default function OfferForm({
   const [basePrice, setBasePrice] = useState(String(existing?.base_price ?? ''))
   const [targetPrice, setTargetPrice] = useState(String(existing?.target_price ?? ''))
   const [targetParticipants, setTargetParticipants] = useState(String(existing?.target_participants ?? ''))
-  const [endsAt, setEndsAt] = useState(existing?.ends_at ? existing.ends_at.slice(0, 10) : '')
+  const [unit, setUnit] = useState<UnitType>(existing?.unit ?? 'participants')
+
+  const [endsDate, setEndsDate] = useState(existing?.ends_at ? existing.ends_at.slice(0, 10) : '')
+  const [endsTime, setEndsTime] = useState(existing?.ends_at ? existing.ends_at.slice(11, 16) : '23:59')
+
   const [isActive, setIsActive] = useState(existing?.is_active ?? true)
 
   const [scopeType, setScopeType] = useState<ScopeType>(existing?.scope_type ?? 'city')
@@ -33,6 +38,7 @@ export default function OfferForm({
   const [complex, setComplex] = useState(existing?.residential_complex ?? '')
   const [street, setStreet] = useState(existing?.street ?? '')
   const [building, setBuilding] = useState(existing?.building ?? '')
+  const [customLabel, setCustomLabel] = useState(existing?.custom_scope_label ?? '')
 
   const [tiers, setTiers] = useState<TierDraft[]>(
     existingTiers && existingTiers.length > 0
@@ -55,11 +61,11 @@ export default function OfferForm({
 
   async function save() {
     setError(null)
-    if (!title.trim() || !basePrice || !targetPrice || !targetParticipants || !endsAt) {
+    if (!title.trim() || !basePrice || !targetPrice || !targetParticipants || !endsDate) {
       setError('Заполните все обязательные поля')
       return
     }
-    if (scopeType !== 'country' && !city.trim()) {
+    if (scopeType !== 'country' && scopeType !== 'custom' && !city.trim()) {
       setError('Укажите город')
       return
     }
@@ -75,6 +81,10 @@ export default function OfferForm({
       setError('Укажите улицу и дом')
       return
     }
+    if (scopeType === 'custom' && !customLabel.trim()) {
+      setError('Опишите, для кого это предложение')
+      return
+    }
 
     setSaving(true)
 
@@ -85,14 +95,16 @@ export default function OfferForm({
       base_price: Number(basePrice),
       target_price: Number(targetPrice),
       target_participants: Number(targetParticipants),
-      ends_at: new Date(endsAt + 'T23:59:59').toISOString(),
+      unit,
+      ends_at: new Date(`${endsDate}T${endsTime}:00`).toISOString(),
       is_active: isActive,
       scope_type: scopeType,
-      city: scopeType === 'country' ? null : city.trim(),
+      city: scopeType === 'country' || scopeType === 'custom' ? null : city.trim(),
       district: scopeType === 'district' ? district.trim() : null,
       residential_complex: scopeType === 'residential_complex' ? complex.trim() : null,
       street: scopeType === 'building' ? street.trim() : null,
       building: scopeType === 'building' ? building.trim() : null,
+      custom_scope_label: scopeType === 'custom' ? customLabel.trim() : null,
     }
 
     let offerId = existing?.id
@@ -114,7 +126,6 @@ export default function OfferForm({
       offerId = data.id
     }
 
-    // пересобираем уровни цен: удаляем старые, вставляем новые
     if (offerId) {
       await supabase.from('price_tiers').delete().eq('offer_id', offerId)
       const validTiers = tiers
@@ -142,19 +153,56 @@ export default function OfferForm({
     router.refresh()
   }
 
+  const unitShort = UNIT_LABELS[unit].short === 'чел.' ? 'человек' : UNIT_LABELS[unit].short
+
   return (
     <div className="flex flex-col gap-5">
       <Field label="Название *" value={title} onChange={setTitle} placeholder="Мясной набор" />
       <TextArea label="Описание" value={description} onChange={setDescription} placeholder="5 кг мяса, фарш, курица" />
-      <Field label="Ссылка на фото (URL)" value={imageUrl} onChange={setImageUrl} placeholder="https://…" />
+      <ImageUploader value={imageUrl} onChange={setImageUrl} />
 
       <div className="grid grid-cols-2 gap-3">
         <Field label="Обычная цена *" value={basePrice} onChange={setBasePrice} placeholder="35000" type="number" />
         <Field label="Целевая цена *" value={targetPrice} onChange={setTargetPrice} placeholder="29900" type="number" />
       </div>
+
+      <div>
+        <label className="text-sm text-muted mb-2 block">Считаем прогресс в:</label>
+        <div className="grid grid-cols-3 gap-2">
+          {(Object.keys(UNIT_LABELS) as UnitType[]).map((u) => (
+            <button
+              key={u}
+              onClick={() => setUnit(u)}
+              className={`rounded-xl2 px-2 py-2.5 text-sm font-semibold border ${
+                unit === u ? 'bg-white text-ink border-white' : 'bg-surface border-white/10 text-muted'
+              }`}
+            >
+              {UNIT_LABELS[u].plural}
+            </button>
+          ))}
+        </div>
+      </div>
+
       <div className="grid grid-cols-2 gap-3">
-        <Field label="Кол-во участников *" value={targetParticipants} onChange={setTargetParticipants} placeholder="50" type="number" />
-        <Field label="Дата окончания *" value={endsAt} onChange={setEndsAt} type="date" />
+        <Field label={`Целевое кол-во (${unitShort}) *`} value={targetParticipants} onChange={setTargetParticipants} placeholder="50" type="number" />
+      </div>
+
+      <div>
+        <label className="text-sm text-muted mb-1.5 block">Дата и время окончания *</label>
+        <div className="grid grid-cols-2 gap-3">
+          <input
+            value={endsDate}
+            onChange={(e) => setEndsDate(e.target.value)}
+            type="date"
+            className="w-full rounded-xl2 bg-surface border border-white/10 px-4 py-3 outline-none focus:border-white/30"
+          />
+          <input
+            value={endsTime}
+            onChange={(e) => setEndsTime(e.target.value)}
+            type="time"
+            className="w-full rounded-xl2 bg-surface border border-white/10 px-4 py-3 outline-none focus:border-white/30"
+          />
+        </div>
       </div>
 
       <div>
@@ -174,7 +222,9 @@ export default function OfferForm({
         </div>
       </div>
 
-      {scopeType !== 'country' && <Field label="Город *" value={city} onChange={setCity} placeholder="Актобе" />}
+      {scopeType !== 'country' && scopeType !== 'custom' && (
+        <Field label="Город *" value={city} onChange={setCity} placeholder="Актобе" />
+      )}
       {scopeType === 'district' && <Field label="Район *" value={district} onChange={setDistrict} placeholder="Астана" />}
       {scopeType === 'residential_complex' && (
         <Field label="ЖК *" value={complex} onChange={setComplex} placeholder="Альтаир" />
@@ -185,10 +235,24 @@ export default function OfferForm({
           <Field label="Дом *" value={building} onChange={setBuilding} placeholder="15" />
         </div>
       )}
+      {scopeType === 'custom' && (
+        <div>
+          <Field
+            label="Для кого (произвольный текст) *"
+            value={customLabel}
+            onChange={setCustomLabel}
+            placeholder="Для подруг Балаусы"
+          />
+          <p className="text-xs text-muted mt-1.5">
+            Это предложение никто не увидит в общей ленте автоматически. После создания добавьте нужных
+            пользователей вручную через список пользователей в admin-панели.
+          </p>
+        </div>
+      )}
 
       <div>
         <div className="flex items-center justify-between mb-2">
-          <label className="text-sm text-muted">Уровни цены (от N участников)</label>
+          <label className="text-sm text-muted">Уровни цены (от N {unitShort})</label>
           <button onClick={addTier} className="text-sm text-accent2 font-semibold">
             + уровень
           </button>
@@ -199,7 +263,7 @@ export default function OfferForm({
               <input
                 value={t.min_participants}
                 onChange={(e) => updateTier(i, 'min_participants', e.target.value)}
-                placeholder="от N чел."
+                placeholder={`от N ${unitShort}`}
                 type="number"
                 className="w-1/3 rounded-lg bg-surface border border-white/10 px-3 py-2 text-sm outline-none"
               />

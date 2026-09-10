@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { formatTenge, currentPrice, nextTierGap } from '@/lib/pricing'
+import { formatTenge, currentPrice, nextTierGap, scopeLabel, unitLabel } from '@/lib/pricing'
 import type { OfferWithStats } from '@/lib/types'
 
 export default function InviteButton({ offer }: { offer: OfferWithStats }) {
@@ -12,12 +12,21 @@ export default function InviteButton({ offer }: { offer: OfferWithStats }) {
 
   async function handleInvite() {
     const url = `${window.location.origin}/invite/${offer.id}`
-    const gapLine = gap ? `\nЕщё ${gap.need} человек — и цена снизится.` : ''
-    const text = `СБРОС: ${offer.title} за ${formatTenge(price)}\nУже участвуют ${count} человек.${gapLine}\n${url}`
+    const gapLine = gap ? `\nЕщё ${gap.need} ${unitLabel(offer.unit, gap.need)} — и цена снизится.` : ''
+    const scopeLine = scopeLabel(offer)
+
+    const text =
+      `СБРОС #${offer.offer_number}: ${offer.title}\n` +
+      `${scopeLine}\n\n` +
+      `Обычная цена: ${formatTenge(offer.base_price)}\n` +
+      `Минимальная цена: ${formatTenge(offer.target_price)}\n` +
+      `Сейчас: ${formatTenge(price)}\n\n` +
+      `Уже участвуют ${count} человек.${gapLine}\n\n` +
+      url
 
     try {
       if (navigator.share) {
-        await navigator.share({ title: 'СБРОС', text, url })
+        await navigator.share({ text })
         return
       }
       await navigator.clipboard.writeText(text)

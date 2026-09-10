@@ -1,4 +1,5 @@
-export type ScopeType = 'building' | 'residential_complex' | 'district' | 'city' | 'country'
+export type ScopeType = 'building' | 'residential_complex' | 'district' | 'city' | 'country' | 'custom'
+export type UnitType = 'participants' | 'kg' | 'pcs'
 
 export type Profile = {
   id: string
@@ -39,6 +40,9 @@ export type Offer = {
   street: string | null
   is_active: boolean
   created_at: string
+  unit: UnitType
+  custom_scope_label: string | null
+  offer_number: number
 }
 
 export type OfferStats = {
@@ -65,6 +69,7 @@ export const SCOPE_LABELS: Record<ScopeType, string> = {
   district: 'района',
   city: 'города',
   country: 'Казахстана',
+  custom: 'особая группа',
 }
 
 export const SCOPE_ICONS: Record<ScopeType, string> = {
@@ -73,6 +78,7 @@ export const SCOPE_ICONS: Record<ScopeType, string> = {
   district: '📍',
   city: '🌆',
   country: '🇰🇿',
+  custom: '✨',
 }
 
 // приоритет сортировки: чем меньше число — тем локальнее и выше в ленте
@@ -82,4 +88,11 @@ export const SCOPE_PRIORITY: Record<ScopeType, number> = {
   district: 2,
   city: 3,
   country: 4,
+  custom: -1, // выше всех — это персональное приглашение
+}
+
+export const UNIT_LABELS: Record<UnitType, { singular: string; plural: string; short: string }> = {
+  participants: { singular: 'участник', plural: 'участников', short: 'чел.' },
+  kg: { singular: 'килограмм', plural: 'килограммов', short: 'кг' },
+  pcs: { singular: 'штука', plural: 'штук', short: 'шт' },
 }

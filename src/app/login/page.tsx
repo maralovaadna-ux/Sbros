@@ -1,19 +1,28 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const [phone, setPhone] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
+  const redirectTo = searchParams.get('redirect') || '/'
+
+  function handlePhoneChange(value: string) {
+    // +7 всегда закреплён спереди, пользователь редактирует только остаток
+    const digitsAfterPrefix = value.replace(/^\+7/, '').replace(/\D/g, '')
+    setPhone('+7' + digitsAfterPrefix)
+  }
+
   async function enter() {
     setError(null)
-    if (phone.replace(/\D/g, '').length < 10) {
+    if (phone.replace(/\D/g, '').length < 11) {
       setError('Введите корректный номер телефона')
       return
     }
@@ -41,7 +50,7 @@ export default function LoginPage() {
       setLoading(false)
 
       if (signInErr || !signInData.session) {
-        setError(`DEBUG signIn: ${signInErr?.message ?? 'no session'}`)
+        setError('Не получилось войти. Попробуйте ещё раз.')
         return
       }
 
@@ -52,14 +61,14 @@ export default function LoginPage() {
         .single()
 
       if (!profile || !profile.street || !profile.building) {
-        router.push('/onboarding')
+        router.push(`/onboarding?redirect=${encodeURIComponent(redirectTo)}`)
       } else {
-        router.push('/')
+        router.push(redirectTo)
       }
       router.refresh()
     } catch (e: any) {
       setLoading(false)
-      setError(`DEBUG client catch: ${e?.message ?? String(e)}`)
+      setError('Не получилось войти. Попробуйте ещё раз.')
     }
   }
 
@@ -72,8 +81,8 @@ export default function LoginPage() {
 
       <label className="text-sm text-muted mb-2 block">Номер телефона</label>
       <input
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
+        value={phone || '+7'}
+        onChange={(e) => handlePhoneChange(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && enter()}
         placeholder="+7 700 000 00 00"
         inputMode="tel"
@@ -92,5 +101,13 @@ export default function LoginPage() {
         Если вы заходите впервые — аккаунт создастся автоматически.
       </p>
     </div>
+  )
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginForm />
+    </Suspense>
   )
 }

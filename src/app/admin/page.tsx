@@ -57,7 +57,7 @@ export default async function AdminPage() {
               className="rounded-xl2 bg-surface border border-white/8 p-4 block"
             >
               <div className="flex items-center justify-between mb-1">
-                <h3 className="font-bold">{o.title}</h3>
+                <h3 className="font-bold">#{o.offer_number} {o.title}</h3>
                 {!o.is_active && (
                   <span className="text-xs bg-white/10 rounded-full px-2 py-0.5 text-muted">выкл</span>
                 )}

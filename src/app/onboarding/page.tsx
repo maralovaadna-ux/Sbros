@@ -1,11 +1,12 @@
 'use client'
 
-import { useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, Suspense } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 
-export default function OnboardingPage() {
+function OnboardingForm() {
   const router = useRouter()
+  const searchParams = useSearchParams()
   const supabase = createClient()
   const [name, setName] = useState('')
   const [city, setCity] = useState('Актобе')
@@ -15,6 +16,8 @@ export default function OnboardingPage() {
   const [building, setBuilding] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  const redirectTo = searchParams.get('redirect') || '/'
 
   async function save() {
     setError(null)
@@ -49,7 +52,7 @@ export default function OnboardingPage() {
       setError('Не получилось сохранить. Попробуйте ещё раз.')
       return
     }
-    router.push('/')
+    router.push(redirectTo)
   }
 
   return (
@@ -78,6 +81,14 @@ export default function OnboardingPage() {
         {loading ? 'Сохранение…' : 'ПРОДОЛЖИТЬ'}
       </button>
     </div>
+  )
+}
+
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={null}>
+      <OnboardingForm />
+    </Suspense>
   )
 }
 

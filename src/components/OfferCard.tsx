@@ -1,7 +1,8 @@
 import Link from 'next/link'
 import ProgressBar from './ProgressBar'
 import ScopeBadge from './ScopeBadge'
-import { currentPrice, formatTenge, nextTierGap, progressPercent } from '@/lib/pricing'
+import Countdown from './Countdown'
+import { currentPrice, formatTenge, nextTierGap, progressPercent, unitCountLabel, unitLabel } from '@/lib/pricing'
 import type { OfferWithStats } from '@/lib/types'
 
 export default function OfferCard({ offer }: { offer: OfferWithStats }) {
@@ -17,6 +18,10 @@ export default function OfferCard({ offer }: { offer: OfferWithStats }) {
     >
       <div className="flex items-start justify-between gap-2 mb-2">
         <ScopeBadge offer={offer} />
+        <div className="flex items-center gap-2">
+          <span className="text-xs text-muted">#{offer.offer_number}</span>
+          <Countdown endsAt={offer.ends_at} compact />
+        </div>
       </div>
 
       {offer.image_url && (
@@ -42,9 +47,9 @@ export default function OfferCard({ offer }: { offer: OfferWithStats }) {
 
       <div className="flex items-center justify-between mt-2 text-sm">
         <span className="font-semibold">
-          {count} / {offer.target_participants} участников
+          {unitCountLabel(offer.unit, count)} / {unitCountLabel(offer.unit, offer.target_participants)}
         </span>
-        {gap && <span className="text-muted">ещё {gap.need} чел.</span>}
+        {gap && <span className="text-muted">ещё {gap.need} {unitLabel(offer.unit, gap.need)}</span>}
       </div>
     </Link>
   )

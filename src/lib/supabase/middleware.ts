@@ -27,15 +27,20 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  // Защита /admin на уровне middleware (первая линия; RLS — вторая, настоящая)
+  // Гостевой доступ разрешён везде, кроме /admin (только для админа) и /profile, /onboarding
+  // (эти два экрана бессмысленны без аккаунта — там личные данные и адрес).
   const isAdminRoute = request.nextUrl.pathname.startsWith('/admin')
-  const isAuthRoute =
-    request.nextUrl.pathname.startsWith('/login') ||
+  const requiresAuth =
+    isAdminRoute ||
+    request.nextUrl.pathname.startsWith('/profile') ||
     request.nextUrl.pathname.startsWith('/onboarding')
 
-  if (!user && !isAuthRoute && !request.nextUrl.pathname.startsWith('/invite')) {
+  if (!user && requiresAuth) {
+    const seenWelcome = request.cookies.get('sbros_welcome_seen')?.value === '1'
     const url = request.nextUrl.clone()
-    url.pathname = '/login'
+    url.pathname = seenWelcome ? '/login' : '/welcome'
+    // после входа вернём человека туда, куда он шёл
+    url.searchParams.set('redirect', request.nextUrl.pathname)
     return NextResponse.redirect(url)
   }
 

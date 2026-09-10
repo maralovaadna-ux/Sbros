@@ -1,6 +1,6 @@
 import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
 import OfferCard from '@/components/OfferCard'
+import LockedOfferCard from '@/components/LockedOfferCard'
 import ScopeFilter from '@/components/ScopeFilter'
 import type { Offer, OfferWithStats, PriceTier, Profile, ScopeType } from '@/lib/types'
 import { SCOPE_PRIORITY } from '@/lib/types'
@@ -18,18 +18,20 @@ export default async function HomePage({
     data: { user },
   } = await supabase.auth.getUser()
 
-  if (!user) redirect('/login')
+  let profile: Profile | null = null
+  if (user) {
+    const { data } = await supabase.from('profiles').select('*').eq('id', user.id).single<Profile>()
+    profile = data
+    // залогиненный, но ещё не заполнил адрес — доводим до онбординга
+    if (profile && (!profile.street || !profile.building)) {
+      const { redirect } = await import('next/navigation')
+      redirect('/onboarding')
+    }
+  }
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single<Profile>()
-
-  if (!profile || !profile.street || !profile.building) redirect('/onboarding')
-
-  // RLS уже фильтрует по гео-доступу — offers_select_scoped возвращает
-  // только то, что видно этому пользователю (или всё, если он админ).
+  // RLS теперь открывает select всем (гостям тоже) — фильтрацию по гео для гостя
+  // делаем на фронтенде: локальные (building/residential_complex/district/custom)
+  // показываем как заблокированные заглушки, если у нас нет профиля с адресом.
   const { data: offers } = await supabase
     .from('offers')
     .select('*')
@@ -56,7 +58,24 @@ export default async function HomePage({
     stats: statsByOffer.get(o.id) ?? { offer_id: o.id, participants_count: 0, current_price: o.base_price },
   }))
 
-  // применяем UI-фильтр поверх (RLS уже гарантирует доступ, здесь просто сужаем вид)
+  // Определяем видимость для конкретного пользователя/гостя.
+  // Для гостя (нет профиля) все локальные предложения — заглушки.
+  // Для залогиненного — используем настоящую проверку через RPC (учитывает адрес).
+  let accessMap = new Map<string, boolean>()
+  if (user) {
+    const results = await Promise.all(
+      enriched.map((o) =>
+        supabase.rpc('can_user_access_offer', { p_user_id: user.id, p_offer_id: o.id }).then((r) => [o.id, !!r.data] as const)
+      )
+    )
+    accessMap = new Map(results)
+  }
+
+  function isLocal(scope: ScopeType) {
+    return scope === 'building' || scope === 'residential_complex' || scope === 'district' || scope === 'custom'
+  }
+
+  // применяем UI-фильтр поверх
   const scopeFilter = searchParams.scope as ScopeType | undefined
   if (scopeFilter) {
     enriched = enriched.filter((o) => o.scope_type === scopeFilter)
@@ -73,12 +92,15 @@ export default async function HomePage({
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight">СБРОС</h1>
           <p className="text-muted text-sm">
-            📍 {profile.city}
-            {profile.district ? `, ${profile.district}` : ''}
+            {profile ? (
+              <>📍 {profile.city}{profile.district ? `, ${profile.district}` : ''}</>
+            ) : (
+              'Смотрите предложения без регистрации'
+            )}
           </p>
         </div>
         <Link
-          href="/profile"
+          href={profile ? '/profile' : '/welcome'}
           className="w-10 h-10 rounded-full bg-surface border border-white/10 flex items-center justify-center"
         >
           🙂
@@ -91,9 +113,15 @@ export default async function HomePage({
         {enriched.length === 0 && (
           <p className="text-center text-muted py-16">Пока нет предложений для вас. Загляните позже.</p>
         )}
-        {enriched.map((offer) => (
-          <OfferCard key={offer.id} offer={offer} />
-        ))}
+        {enriched.map((offer) => {
+          const hasAccess = user ? accessMap.get(offer.id) ?? false : false
+          const showLocked = isLocal(offer.scope_type) && !hasAccess
+          return showLocked ? (
+            <LockedOfferCard key={offer.id} offer={offer} />
+          ) : (
+            <OfferCard key={offer.id} offer={offer} />
+          )
+        })}
       </div>
     </div>
   )
