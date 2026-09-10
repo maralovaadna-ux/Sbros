@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react'
 
 const SESSION_KEY = 'sbros_splash_shown'
-const SPLASH_DURATION_MS = 5000
+const SPLASH_DURATION_MS = 2000
 
 export default function SplashScreen() {
   const [visible, setVisible] = useState(false)
