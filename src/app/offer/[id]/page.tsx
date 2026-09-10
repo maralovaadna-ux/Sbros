@@ -18,7 +18,6 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
     data: { user },
   } = await supabase.auth.getUser()
 
-  // RLS теперь открыт для всех (в т.ч. гостей) — если предложения нет вообще, будет notFound.
   const { data: offer } = await supabase
     .from('offers')
     .select('*')
@@ -63,11 +62,13 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
 
   return (
     <div className="pb-10">
-      <header className="px-4 pt-5 pb-3 flex items-center gap-3">
-        <Link href="/" className="text-xl">
-          ←
+      <header className="px-4 pt-5 pb-3">
+        <Link
+          href="/"
+          className="inline-flex items-center gap-2 rounded-full bg-white/10 border border-white/15 px-4 py-2 text-sm font-semibold text-white"
+        >
+          ← Все предложения
         </Link>
-        <span className="text-sm text-muted">Назад</span>
       </header>
 
       {offer.image_urls?.length > 0 && (
@@ -110,6 +111,13 @@ export default async function OfferPage({ params }: { params: { id: string } }) 
           <h2 className="text-lg font-bold mb-3">💬 Чат — {offer.title}</h2>
           <Chat offerId={offer.id} userId={user?.id ?? null} initialMessages={messages ?? []} isGuest={!user} />
         </div>
+
+        <Link
+          href="/"
+          className="block w-full text-center rounded-xl2 border border-white/15 bg-white/5 py-3.5 font-bold text-white mt-8"
+        >
+          ← Все предложения
+        </Link>
       </div>
     </div>
   )
