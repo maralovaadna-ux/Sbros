@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import OfferForm from '@/components/OfferForm'
+import InviteButton from '@/components/InviteButton'
 import type { Offer, PriceTier, Profile } from '@/lib/types'
 import AdminChatModeration from './AdminChatModeration'
 import CustomScopeAccessManager from './CustomScopeAccessManager'
@@ -20,7 +21,7 @@ export default async function EditOfferPage({ params }: { params: { id: string }
   const { data: offer } = await supabase.from('offers').select('*').eq('id', params.id).single<Offer>()
   if (!offer) notFound()
 
-  const [{ data: tiers }, { data: participants }, { data: messages }, { data: allUsers }, { data: customAccess }] =
+  const [{ data: tiers }, { data: participants }, { data: messages }, { data: allUsers }, { data: customAccess }, { count: participantsCount }] =
     await Promise.all([
       supabase.from('price_tiers').select('*').eq('offer_id', offer.id).order('min_participants').returns<PriceTier[]>(),
       supabase
@@ -35,7 +36,18 @@ export default async function EditOfferPage({ params }: { params: { id: string }
         .order('created_at', { ascending: false }),
       supabase.from('profiles').select('*').order('name').returns<Profile[]>(),
       supabase.from('custom_scope_access').select('user_id').eq('offer_id', offer.id),
+      supabase.from('participations').select('id', { count: 'exact', head: true }).eq('offer_id', offer.id),
     ])
+
+  const offerWithStats = {
+    ...offer,
+    price_tiers: tiers ?? [],
+    stats: {
+      offer_id: offer.id,
+      participants_count: participantsCount ?? 0,
+      current_price: offer.base_price,
+    },
+  }
 
   return (
     <div className="px-4 pt-6 pb-16">
@@ -45,6 +57,10 @@ export default async function EditOfferPage({ params }: { params: { id: string }
         </Link>
         <h1 className="text-xl font-bold">Редактировать</h1>
       </header>
+
+      <div className="mb-6">
+        <InviteButton offer={offerWithStats} />
+      </div>
 
       <OfferForm existing={offer} existingTiers={tiers ?? []} />
 

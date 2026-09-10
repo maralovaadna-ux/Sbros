@@ -2,7 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import type { Offer } from '@/lib/types'
-import { scopeLabel, formatTenge } from '@/lib/pricing'
+import AdminOfferRow from './AdminOfferRow'
 
 export const dynamic = 'force-dynamic'
 
@@ -48,28 +48,9 @@ export default async function AdminPage() {
       </Link>
 
       <div className="flex flex-col gap-3">
-        {(offers ?? []).map((o) => {
-          const s = statsByOffer.get(o.id)
-          return (
-            <Link
-              key={o.id}
-              href={`/admin/offers/${o.id}/edit`}
-              className="rounded-xl2 bg-surface border border-white/8 p-4 block"
-            >
-              <div className="flex items-center justify-between mb-1">
-                <h3 className="font-bold">#{o.offer_number} {o.title}</h3>
-                {!o.is_active && (
-                  <span className="text-xs bg-white/10 rounded-full px-2 py-0.5 text-muted">выкл</span>
-                )}
-              </div>
-              <p className="text-xs text-muted mb-2">{scopeLabel(o)}</p>
-              <div className="flex items-center justify-between text-sm">
-                <span>{s?.participants_count ?? 0} / {o.target_participants} участников</span>
-                <span className="font-semibold text-accent2">{formatTenge(s?.current_price ?? o.base_price)}</span>
-              </div>
-            </Link>
-          )
-        })}
+        {(offers ?? []).map((o) => (
+          <AdminOfferRow key={o.id} offer={o} stats={statsByOffer.get(o.id)} />
+        ))}
       </div>
     </div>
   )
